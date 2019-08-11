@@ -6,47 +6,49 @@ from keras.utils import np_utils
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense
-np.random.seed(10)
+from keras.models import load_model
+np.random.seed(1234)  # for reproducibility
 
 
-def showImg(img):
-    fig = plt.gcf()
-    fig.set_size_inches(2, 2)
-    plt.imshow(img, cmap='binary')
-    plt.show()
+def showPredict(imgs, lbls, predictions):
+    plt.gcf().set_size_inches(10, 10)
+    for i in range(0, 10):
+        fig = plt.subplot(2, 5, i + 1)
+        fig.imshow(imgs[i], cmap='binary')
 
+        title = 'prediction = ' + str(predictions[i])
+        if predictions[i] != lbls[i]:
+            title += '(X)'
 
-def showPredict(imgs, lbls, predicts, startID, num=10):
-    plt.gcf().set_size_inches(12, 14)
-    if num > 25: num = 25
-    for i in range(0, num):
-        ax = plt.subplot(5, 5, i + 1)
-        ax.imshow(imgs[startID], cmap='binary')
-
-        if len(predicts) > 0:
-            title = 'ai = ' + str(predicts[i])
-            if predicts[i] == lbls[i]:
-                title += '(O)'
-            else:
-                title += '(X)'
-
-            title += '\nlabel = ' + str(lbls[i])
-        else:
-            title += 'label = ' + str(lbls[i])
-
-        ax.set_title(title, fontsize=12)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        startID += 1
+        title += '\nlabel = ' + str(lbls[i])
+        fig.set_title(title, fontsize=10)
+        fig.set_xticks([])
+        fig.set_yticks([])
     
     plt.show()
 
 
+def mdlTrain(train_feature, train_label, test_feature, test_label):
+    # model definition
+    model = Sequential()
+
+    # input:784, hidden:256, output:10
+    model.add( Dense(units=256, input_dim=784, init='normal', activation='relu') )
+    model.add( Dense(units=10, init='normal', activation='softmax') )
+
+    # training definition
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.fit(x=train_feature, y=train_label, validation_split=0.2, epochs=10, batch_size=200, verbose=2)
+
+    # accuracy evaluation
+    accuracy = model.evaluate(test_feature, test_label)
+    print('\n[Accuracy] = ', accuracy[1])
+
+    return model
+
+
 # load mnist data
 (train_feature, train_label), (test_feature, test_label) = mnist.load_data()
-
-# show the dimension of data : (60000, 28, 28)
-#print(train_feature.shape)
 
 # data preprocessing
 # reshape
@@ -61,22 +63,18 @@ test_feature_normal = test_feature_vector / 255
 train_label_onehot = np_utils.to_categorical(train_label)
 test_label_onehot = np_utils.to_categorical(test_label)
 
-# model definition
-model = Sequential()
-
-# input:784, hidden:256, output:10
-model.add( Dense(units=256, input_dim=784, kernal_initializer='normal', activation='relu') )
-model.add( Dense(units=10, kernal_initializer='normal', activation='softmax') )
-
-# training definition
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-train_history = model.fit(x=train_feature_normal, y=train_label_onehot,
-                          validation_split=0.2, epochs=10, batch_size=200, verbose=2)
-
-# accuracy evaluation
-accuracy = model.evaluate(test_feature_normal, test_label_onehot)
-print('\n[Accuracy] = ', accuracy[1])
-
-# prediction
-prediction = model.predict_classes(test_feature_normal)
-showPredict(test_feature, test_label, prediction, 0)
+action = input("1: Model Testing\n2: Model Training\n")
+if action == "1":
+    print("Load mdl_mlp_mnist.h5")
+    model = load_model("mdl_mlp_mnist.h5")
+    prediction = model.predict_classes(test_feature_normal)
+    showPredict(test_feature, test_label, prediction)
+    del model
+else:
+    print("===== Start training =====")
+    model = mdlTrain(train_feature_normal, train_label_onehot, test_feature_normal, test_label_onehot)
+    model.save("mdl_mlp_mnist.h5")
+    print("===== Model has been saved =====")
+    prediction = model.predict_classes(test_feature_normal)
+    showPredict(test_feature, test_label, prediction)
+    del model
