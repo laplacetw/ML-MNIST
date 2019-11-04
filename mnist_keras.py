@@ -2,6 +2,8 @@
 # coding:utf-8
 import numpy as np
 import matplotlib.pyplot as plt
+from glob import glob
+from cv2 import cv2 as cv
 from keras.utils import np_utils
 from keras.datasets import mnist
 from keras.models import Sequential
@@ -11,6 +13,8 @@ np.random.seed(1234)  # for reproducibility
 
 
 def showPredict(imgs, lbls, predictions):
+    print("lbls : ", lbls)
+    print("prediction : ", prediction)
     plt.gcf().set_size_inches(10, 10)
     for i in range(0, 10):
         fig = plt.subplot(2, 5, i + 1)
@@ -26,7 +30,6 @@ def showPredict(imgs, lbls, predictions):
         fig.set_yticks([])
     
     plt.show()
-
 
 def mdlTrain(train_feature, train_label, test_feature, test_label):
     # model definition
@@ -46,7 +49,26 @@ def mdlTrain(train_feature, train_label, test_feature, test_label):
 
     return model
 
+def get_test_process(files):
+    test_image = []
+    test_label = []
+    for file in files:
+        label = int(file[0:1])
+        image = cv.imread(file, cv.IMREAD_GRAYSCALE)
+        image = cv.threshold(image, 120, 255, cv.THRESH_BINARY_INV)[1]  # retval, dst = cv.threshold(src, thresh, maxval, type[,dst])
+        test_image.append(image)
+        test_label.append(label)
 
+    test_image = np.array(test_image)
+    test_label = np.array(test_label)
+
+    test_image_normal = test_image.reshape(len(test_image), 784).astype('float32') / 255
+    test_label_onehot = np_utils.to_categorical(test_label)
+
+    return (test_image, test_label), (test_image_normal, test_label_onehot)
+
+
+'''
 # load mnist data
 (train_feature, train_label), (test_feature, test_label) = mnist.load_data()
 
@@ -78,3 +100,12 @@ else:
     prediction = model.predict_classes(test_feature_normal)
     showPredict(test_feature, test_label, prediction)
     del model
+
+'''
+model = load_model("mdl_mlp_mnist.h5")
+print("=== Load mdl_mlp_mnist.h5 ===")
+files = glob('*.jpg')
+(test_image, test_label), (test_image_normal, test_label_onehot) = get_test_process(files)
+prediction = model.predict_classes(test_image_normal)
+showPredict(test_image, test_label, prediction)
+del model
