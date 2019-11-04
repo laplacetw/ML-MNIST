@@ -53,16 +53,20 @@ def get_test_process(files):
     test_image = []
     test_label = []
     for file in files:
-        label = int(file[0:1])
-        image = cv.imread(file, cv.IMREAD_GRAYSCALE)
-        image = cv.threshold(image, 120, 255, cv.THRESH_BINARY_INV)[1]  # retval, dst = cv.threshold(src, thresh, maxval, type[,dst])
+        label = int(file[0:1])  # get label from file name
+        image = cv.imread(file, cv.IMREAD_GRAYSCALE)  # read image as grayscale
+        # retval, dst = cv.threshold(src, thresh, maxval, type[,dst])
+        image = cv.threshold(image, 120, 255, cv.THRESH_BINARY_INV)[1]  # binary invert
         test_image.append(image)
         test_label.append(label)
 
+    # list -> numpy.array
     test_image = np.array(test_image)
     test_label = np.array(test_label)
 
+    # reshape(flatten) & normalization
     test_image_normal = test_image.reshape(len(test_image), 784).astype('float32') / 255
+    # one-hot encoding
     test_label_onehot = np_utils.to_categorical(test_label)
 
     return (test_image, test_label), (test_image_normal, test_label_onehot)
@@ -104,7 +108,8 @@ else:
 '''
 model = load_model("mdl_mlp_mnist.h5")
 print("=== Load mdl_mlp_mnist.h5 ===")
-files = glob('*.jpg')
+files = glob('*.jpg')  # find all images (path)
+# data preprocessing
 (test_image, test_label), (test_image_normal, test_label_onehot) = get_test_process(files)
 prediction = model.predict_classes(test_image_normal)
 showPredict(test_image, test_label, prediction)
